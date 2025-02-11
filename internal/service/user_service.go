@@ -1,22 +1,44 @@
 package service
 
+import (
+	"context"
+	"errors"
+	"merch-shop/internal/config"
+	"merch-shop/internal/models"
+	"merch-shop/internal/repository"
+	"merch-shop/internal/utils"
+)
+
 type UserService struct {
-	userRepo *repository.UserRepository
+	userRepo repository.UserRepo
+	cfg      *config.Config
+}
+
+func NewUserService(repo repository.UserRepo, cfg *config.Config) *UserService {
+	return &UserService{
+		userRepo: repo,
+		cfg:      cfg,
+	}
 }
 
 func (u *UserService) Login(ctx context.Context, username, password string) (string, error) {
-	user, err := userRepo.GetByUsername(username)
-	if err != nil {
-		if errors.Is(err, userRepo.ErrRecordNotFound) {
-			jwt, err := u.Add(username, password)
-			return jwt, err
-		}
-		return "", nil
+	if err := utils.ValidatePassword(password); err != nil {
+		return "", err
 	}
 
-	if !utils.CheckPasswordHash(user.password, password) {
-		return "", Err
+	user, err := u.userRepo.GetByUsername(ctx, username)
+	if err != nil {
+		if errors.Is(err, repository.ErrRecordNotFound) {
+			return u.Add(ctx, username, password)
+		}
+		return "", err
 	}
+
+	if err := utils.CheckPasswordHash(user.PasswordHash, password); err != nil {
+		return "", err
+	}
+
+	return utils.GenerateToken(user.ID, u.cfg.JWT.Secret, u.cfg.JWT.TokenExpiry)
 }
 
 func (u *UserService) Add(ctx context.Context, username, password string) (string, error) {
@@ -26,14 +48,14 @@ func (u *UserService) Add(ctx context.Context, username, password string) (strin
 	}
 
 	user := &models.User{
-		Username: username,
-		Password: hashedPassword,
+		Username:     username,
+		PasswordHash: hashedPassword,
 	}
-
-	token, err := utils.GetJWT(user)
 
 	err = u.userRepo.Add(ctx, user)
 	if err != nil {
 		return "", err
 	}
+
+	return utils.GenerateToken(user.ID, u.cfg.JWT.Secret, u.cfg.JWT.TokenExpiry)
 }

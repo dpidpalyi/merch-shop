@@ -1,21 +1,23 @@
 package models
 
+import "time"
+
 type Transaction struct {
-	ID int
-	SenderID int
+	ID         int
+	SenderID   int
 	ReceiverID int
-	Amount int 
-	CreatedAt time.Time
+	Amount     int
+	CreatedAt  time.Time
 }
 
-func Inventory struct {
-	ID int
-	UserID int
-	ItemID int
+type Inventory struct {
+	ID       int
+	UserID   int
+	ItemID   int
 	Quantity int
 }
 
-func Coins struct {
-	UserID int
+type Coins struct {
+	UserID  int
 	Balance int
 }

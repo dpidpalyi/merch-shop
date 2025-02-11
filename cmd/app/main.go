@@ -4,6 +4,9 @@ import (
 	"log"
 	"merch-shop/internal/config"
 	"merch-shop/internal/dbinit"
+	"merch-shop/internal/handlers"
+	"merch-shop/internal/repository"
+	"merch-shop/internal/service"
 	"net"
 	"net/http"
 	"os"
@@ -22,10 +25,14 @@ func main() {
 	if err != nil {
 		logger.Fatal(err)
 	}
-	db.Close()
+
+	userRepo := repository.NewPostgresUserRepo(db)
+	userService := service.NewUserService(userRepo, cfg)
+	userHandler := handlers.NewUserHandler(userService, logger)
 
 	srv := &http.Server{
-		Addr: net.JoinHostPort("", cfg.Server.Port),
+		Addr:    net.JoinHostPort("", cfg.Server.Port),
+		Handler: userHandler.Routes(),
 	}
 
 	logger.Printf("starting backend on %s", srv.Addr)

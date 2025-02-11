@@ -23,11 +23,11 @@ type Config struct {
 		SSLMode  string `env:"DB_SSL_MODE"`
 	}
 
-	//JWT struct {
-	//	Secret        string
-	//	TokenExpiry   time.Duration
-	//	RefreshExpiry time.Duration
-	//}
+	JWT struct {
+		Secret        string
+		TokenExpiry   time.Duration
+		RefreshExpiry time.Duration
+	}
 }
 
 func New(path string) (*Config, error) {
