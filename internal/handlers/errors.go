@@ -10,13 +10,13 @@ func (h *UserHandler) errorResponse(w http.ResponseWriter, r *http.Request, stat
 
 	err := h.writeJSON(w, status, data, nil)
 	if err != nil {
-		h.Logger.Print(err)
+		h.logger.Print(err)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 }
 
 func (h *UserHandler) serverErrorResponse(w http.ResponseWriter, r *http.Request, err error) {
-	h.Logger.Print(err)
+	h.logger.Print(err)
 	message := "internal server error"
 	h.errorResponse(w, r, http.StatusInternalServerError, message)
 }

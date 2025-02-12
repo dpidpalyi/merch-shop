@@ -38,7 +38,7 @@ func (u *UserService) Login(ctx context.Context, username, password string) (str
 		return "", err
 	}
 
-	return utils.GenerateToken(user.ID, u.cfg.JWT.Secret, u.cfg.JWT.TokenExpiry)
+	return utils.GenerateToken(user.ID, u.cfg.JWT.SecretKey, u.cfg.JWT.TokenExpiry)
 }
 
 func (u *UserService) Add(ctx context.Context, username, password string) (string, error) {
@@ -57,5 +57,5 @@ func (u *UserService) Add(ctx context.Context, username, password string) (strin
 		return "", err
 	}
 
-	return utils.GenerateToken(user.ID, u.cfg.JWT.Secret, u.cfg.JWT.TokenExpiry)
+	return utils.GenerateToken(user.ID, u.cfg.JWT.SecretKey, u.cfg.JWT.TokenExpiry)
 }

@@ -27,7 +27,7 @@ func main() {
 
 	userRepo := repository.NewPostgresUserRepo(db)
 	userService := service.NewUserService(userRepo, cfg)
-	userHandler := handlers.NewUserHandler(userService, logger)
+	userHandler := handlers.NewUserHandler(userService, cfg, logger)
 
 	srv := &http.Server{
 		Addr:    net.JoinHostPort("", cfg.Server.Port),

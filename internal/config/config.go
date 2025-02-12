@@ -24,9 +24,9 @@ type Config struct {
 	}
 
 	JWT struct {
-		Secret        string
-		TokenExpiry   time.Duration
-		RefreshExpiry time.Duration
+		SecretKey     string        `env:"JWT_SECRET_KEY"`
+		TokenExpiry   time.Duration `env:"JWT_TOKEN_EXPIRY"`
+		RefreshExpiry time.Duration `env:"JWT_REFRESH_EXPIRY"`
 	}
 }
 

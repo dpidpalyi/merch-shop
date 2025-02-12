@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"merch-shop/internal/config"
 	"merch-shop/internal/models"
 	"merch-shop/internal/service"
 	"merch-shop/internal/utils"
@@ -12,14 +13,16 @@ import (
 )
 
 type UserHandler struct {
-	Service *service.UserService
-	Logger  *log.Logger
+	service *service.UserService
+	cfg     *config.Config
+	logger  *log.Logger
 }
 
-func NewUserHandler(service *service.UserService, logger *log.Logger) *UserHandler {
+func NewUserHandler(service *service.UserService, cfg *config.Config, logger *log.Logger) *UserHandler {
 	return &UserHandler{
-		Service: service,
-		Logger:  logger,
+		service: service,
+		cfg:     cfg,
+		logger:  logger,
 	}
 }
 
@@ -39,7 +42,7 @@ func (h *UserHandler) Auth(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	token, err := h.Service.Login(ctx, authRequest.Username, authRequest.Password)
+	token, err := h.service.Login(ctx, authRequest.Username, authRequest.Password)
 	if err != nil {
 		switch {
 		case errors.Is(err, utils.ErrMismatchHashPassword):
@@ -60,4 +63,8 @@ func (h *UserHandler) Auth(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.serverErrorResponse(w, r, err)
 	}
+}
+
+func (h *UserHandler) SendCoin(w http.ResponseWriter, r *http.Request) {
+	h.logger.Print(r.Header)
 }
