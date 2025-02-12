@@ -19,7 +19,6 @@ func main() {
 	if err != nil {
 		logger.Fatal(err)
 	}
-	logger.Print(cfg)
 
 	db, err := dbinit.OpenDB(cfg)
 	if err != nil {

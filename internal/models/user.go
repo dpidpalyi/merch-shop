@@ -15,8 +15,3 @@ type AuthToken struct {
 	Token     string    `json:"token"`
 	CreatedAt time.Time `json:"-"`
 }
-
-type AuthRequest struct {
-	Name     string `json:"username"`
-	Password string `json:"password"`
-}
