@@ -3,30 +3,32 @@ package handlers
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"merch-shop/internal/config"
 	"merch-shop/internal/models"
+	"merch-shop/internal/repository"
 	"merch-shop/internal/service"
 	"merch-shop/internal/utils"
 	"net/http"
 	"time"
 )
 
-type UserHandler struct {
-	service *service.UserService
+type Handler struct {
+	service *service.Service
 	cfg     *config.Config
 	logger  *log.Logger
 }
 
-func NewUserHandler(service *service.UserService, cfg *config.Config, logger *log.Logger) *UserHandler {
-	return &UserHandler{
+func NewHandler(service *service.Service, cfg *config.Config, logger *log.Logger) *Handler {
+	return &Handler{
 		service: service,
 		cfg:     cfg,
 		logger:  logger,
 	}
 }
 
-func (h *UserHandler) Auth(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Auth(w http.ResponseWriter, r *http.Request) {
 	authRequest := &models.AuthRequest{}
 	err := h.readJSON(r, authRequest)
 	if err != nil {
@@ -65,6 +67,32 @@ func (h *UserHandler) Auth(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *UserHandler) SendCoin(w http.ResponseWriter, r *http.Request) {
-	h.logger.Print(r.Header)
+func (h *Handler) SendCoin(w http.ResponseWriter, r *http.Request) {
+	sendCoinRequest := &models.SendCoinRequest{}
+	err := h.readJSON(r, sendCoinRequest)
+	if err != nil {
+		h.badRequestResponse(w, r, err)
+		return
+	}
+
+	if err := sendCoinRequestValid(sendCoinRequest); err != nil {
+		h.badRequestResponse(w, r, err)
+		return
+	}
+
+	ctx := r.Context()
+	fromUserID := ctx.Value("userID").(int)
+
+	toUser, err := h.service.GetByUsername(ctx, sendCoinRequest.ToUser)
+	if err != nil {
+		switch {
+		case errors.Is(err, repository.ErrRecordNotFound):
+			h.badRequestResponse(w, r, fmt.Errorf("%s:%w", sendCoinRequest.ToUser, err))
+		default:
+			h.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	h.logger.Print(fromUserID, toUser)
 }

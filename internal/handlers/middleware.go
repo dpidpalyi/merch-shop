@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-func (h *UserHandler) MiddlewareAuth(next http.HandlerFunc) http.HandlerFunc {
+func (h *Handler) MiddlewareAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		tokenStr, err := utils.ExtractTokenFromHeader(r)
 		if err != nil {

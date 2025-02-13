@@ -7,22 +7,22 @@ import (
 	"merch-shop/internal/models"
 )
 
-type UserRepo interface {
+type Repository interface {
 	GetByUsername(ctx context.Context, username string) (*models.User, error)
 	Add(ctx context.Context, u *models.User) error
 }
 
-type PostgresUserRepo struct {
+type PostgresRepository struct {
 	DB *sql.DB
 }
 
-func NewPostgresUserRepo(db *sql.DB) *PostgresUserRepo {
-	return &PostgresUserRepo{
+func NewPostgresRepository(db *sql.DB) *PostgresRepository {
+	return &PostgresRepository{
 		DB: db,
 	}
 }
 
-func (r *PostgresUserRepo) GetByUsername(ctx context.Context, username string) (*models.User, error) {
+func (r *PostgresRepository) GetByUsername(ctx context.Context, username string) (*models.User, error) {
 	query := `
 	    SELECT id, password_hash, created_at
 	    FROM users
@@ -48,7 +48,9 @@ func (r *PostgresUserRepo) GetByUsername(ctx context.Context, username string) (
 	return user, nil
 }
 
-func (r *PostgresUserRepo) Add(ctx context.Context, u *models.User) error {
+// TODO: add Transaction with adding coin account
+
+func (r *PostgresRepository) Add(ctx context.Context, u *models.User) error {
 	query := `
 	    INSERT INTO users(username, password_hash)
 	    VALUES ($1, $2)

@@ -25,13 +25,13 @@ func main() {
 		logger.Fatal(err)
 	}
 
-	userRepo := repository.NewPostgresUserRepo(db)
-	userService := service.NewUserService(userRepo, cfg)
-	userHandler := handlers.NewUserHandler(userService, cfg, logger)
+	repo := repository.NewPostgresRepository(db)
+	service := service.NewService(repo, cfg)
+	handler := handlers.NewHandler(service, cfg, logger)
 
 	srv := &http.Server{
 		Addr:    net.JoinHostPort("", cfg.Server.Port),
-		Handler: userHandler.Routes(),
+		Handler: handler.Routes(),
 	}
 
 	logger.Printf("starting backend on %s", srv.Addr)

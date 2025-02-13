@@ -9,24 +9,24 @@ import (
 	"merch-shop/internal/utils"
 )
 
-type UserService struct {
-	userRepo repository.UserRepo
-	cfg      *config.Config
+type Service struct {
+	repo repository.Repository
+	cfg  *config.Config
 }
 
-func NewUserService(repo repository.UserRepo, cfg *config.Config) *UserService {
-	return &UserService{
-		userRepo: repo,
-		cfg:      cfg,
+func NewService(repo repository.Repository, cfg *config.Config) *Service {
+	return &Service{
+		repo: repo,
+		cfg:  cfg,
 	}
 }
 
-func (u *UserService) Login(ctx context.Context, username, password string) (string, error) {
+func (u *Service) Login(ctx context.Context, username, password string) (string, error) {
 	if err := utils.ValidatePassword(password); err != nil {
 		return "", err
 	}
 
-	user, err := u.userRepo.GetByUsername(ctx, username)
+	user, err := u.repo.GetByUsername(ctx, username)
 	if err != nil {
 		if errors.Is(err, repository.ErrRecordNotFound) {
 			return u.Add(ctx, username, password)
@@ -41,7 +41,7 @@ func (u *UserService) Login(ctx context.Context, username, password string) (str
 	return utils.GenerateToken(user.ID, u.cfg.JWT.SecretKey, u.cfg.JWT.TokenExpiry)
 }
 
-func (u *UserService) Add(ctx context.Context, username, password string) (string, error) {
+func (u *Service) Add(ctx context.Context, username, password string) (string, error) {
 	hashedPassword, err := utils.HashPassword(password)
 	if err != nil {
 		return "", err
@@ -52,10 +52,14 @@ func (u *UserService) Add(ctx context.Context, username, password string) (strin
 		PasswordHash: hashedPassword,
 	}
 
-	err = u.userRepo.Add(ctx, user)
+	err = u.repo.Add(ctx, user)
 	if err != nil {
 		return "", err
 	}
 
 	return utils.GenerateToken(user.ID, u.cfg.JWT.SecretKey, u.cfg.JWT.TokenExpiry)
+}
+
+func (u *Service) GetByUsername(ctx context.Context, username string) (*models.User, error) {
+	return u.repo.GetByUsername(ctx, username)
 }

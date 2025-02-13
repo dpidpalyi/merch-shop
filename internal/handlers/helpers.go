@@ -8,15 +8,17 @@ import (
 )
 
 var (
-	ErrEmptyNamePassword = errors.New("empty name or password specified")
+	ErrEmptyNamePassword    = errors.New("empty name or password specified")
+	ErrEmptyToUser          = errors.New("empty toUser field")
+	ErrZeroOrNegativeAmount = errors.New("amount to send should be positive")
 )
 
-func (h *UserHandler) readJSON(r *http.Request, dst any) error {
+func (h *Handler) readJSON(r *http.Request, dst any) error {
 	dec := json.NewDecoder(r.Body)
 	return dec.Decode(dst)
 }
 
-func (h *UserHandler) writeJSON(w http.ResponseWriter, status int, data any, headers http.Header) error {
+func (h *Handler) writeJSON(w http.ResponseWriter, status int, data any, headers http.Header) error {
 	js, err := json.Marshal(data)
 	if err != nil {
 		return err
@@ -37,5 +39,18 @@ func authRequestValid(authRequest *models.AuthRequest) error {
 	if authRequest.Username == "" || authRequest.Password == "" {
 		return ErrEmptyNamePassword
 	}
+
+	return nil
+}
+
+func sendCoinRequestValid(sendCoinRequest *models.SendCoinRequest) error {
+	if sendCoinRequest.ToUser == "" {
+		return ErrEmptyToUser
+	}
+
+	if sendCoinRequest.Amount <= 0 {
+		return ErrZeroOrNegativeAmount
+	}
+
 	return nil
 }
