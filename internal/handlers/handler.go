@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"merch-shop/internal/config"
 	"merch-shop/internal/models"
@@ -81,18 +80,23 @@ func (h *Handler) SendCoin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	fromUserID := ctx.Value("userID").(int)
+	senderID := ctx.Value("userID").(int)
 
-	toUser, err := h.service.GetByUsername(ctx, sendCoinRequest.ToUser)
+	err = h.service.SendCoin(ctx, senderID, sendCoinRequest.ReceiverName, sendCoinRequest.Amount)
 	if err != nil {
 		switch {
-		case errors.Is(err, repository.ErrRecordNotFound):
-			h.badRequestResponse(w, r, fmt.Errorf("%s:%w", sendCoinRequest.ToUser, err))
+		case errors.Is(err, repository.ErrRecordNotFound),
+			errors.Is(err, service.ErrNotEnoughCoins),
+			errors.Is(err, service.ErrSendToYourself):
+			h.badRequestResponse(w, r, err)
 		default:
 			h.serverErrorResponse(w, r, err)
 		}
 		return
 	}
 
-	h.logger.Print(fromUserID, toUser)
+	err = h.writeJSON(w, http.StatusOK, "GOOD", nil)
+	if err != nil {
+		h.serverErrorResponse(w, r, err)
+	}
 }

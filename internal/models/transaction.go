@@ -10,13 +10,6 @@ type Transaction struct {
 	CreatedAt  time.Time
 }
 
-type Inventory struct {
-	ID       int
-	UserID   int
-	ItemID   int
-	Quantity int
-}
-
 type Coins struct {
 	UserID  int
 	Balance int

@@ -6,6 +6,6 @@ type AuthRequest struct {
 }
 
 type SendCoinRequest struct {
-	ToUser string `json:"toUser"`
-	Amount int    `json:"amount"`
+	ReceiverName string `json:"toUser"`
+	Amount       int    `json:"amount"`
 }

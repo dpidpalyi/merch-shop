@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"merch-shop/internal/config"
 	"merch-shop/internal/models"
 	"merch-shop/internal/repository"
@@ -21,15 +22,15 @@ func NewService(repo repository.Repository, cfg *config.Config) *Service {
 	}
 }
 
-func (u *Service) Login(ctx context.Context, username, password string) (string, error) {
+func (s *Service) Login(ctx context.Context, username, password string) (string, error) {
 	if err := utils.ValidatePassword(password); err != nil {
 		return "", err
 	}
 
-	user, err := u.repo.GetByUsername(ctx, username)
+	user, err := s.repo.GetByUsername(ctx, username)
 	if err != nil {
 		if errors.Is(err, repository.ErrRecordNotFound) {
-			return u.Add(ctx, username, password)
+			return s.Add(ctx, username, password)
 		}
 		return "", err
 	}
@@ -38,10 +39,10 @@ func (u *Service) Login(ctx context.Context, username, password string) (string,
 		return "", err
 	}
 
-	return utils.GenerateToken(user.ID, u.cfg.JWT.SecretKey, u.cfg.JWT.TokenExpiry)
+	return utils.GenerateToken(user.ID, s.cfg.JWT.SecretKey, s.cfg.JWT.TokenExpiry)
 }
 
-func (u *Service) Add(ctx context.Context, username, password string) (string, error) {
+func (s *Service) Add(ctx context.Context, username, password string) (string, error) {
 	hashedPassword, err := utils.HashPassword(password)
 	if err != nil {
 		return "", err
@@ -52,14 +53,49 @@ func (u *Service) Add(ctx context.Context, username, password string) (string, e
 		PasswordHash: hashedPassword,
 	}
 
-	err = u.repo.Add(ctx, user)
+	err = s.repo.Add(ctx, user)
 	if err != nil {
 		return "", err
 	}
 
-	return utils.GenerateToken(user.ID, u.cfg.JWT.SecretKey, u.cfg.JWT.TokenExpiry)
+	return utils.GenerateToken(user.ID, s.cfg.JWT.SecretKey, s.cfg.JWT.TokenExpiry)
 }
 
-func (u *Service) GetByUsername(ctx context.Context, username string) (*models.User, error) {
-	return u.repo.GetByUsername(ctx, username)
+func (s *Service) GetByUsername(ctx context.Context, username string) (*models.User, error) {
+	return s.repo.GetByUsername(ctx, username)
+}
+
+func (s *Service) SendCoin(ctx context.Context, senderID int, receiverName string, amount int) error {
+	senderBalance, err := s.repo.GetBalance(ctx, senderID)
+	if err != nil {
+		switch {
+		case errors.Is(err, repository.ErrRecordNotFound):
+			return fmt.Errorf("sender user: %w", err)
+		}
+		return err
+	}
+
+	if err := checkBalance(senderBalance, amount); err != nil {
+		return err
+	}
+
+	receiver, err := s.repo.GetByUsername(ctx, receiverName)
+	if err != nil {
+		switch {
+		case errors.Is(err, repository.ErrRecordNotFound):
+			return fmt.Errorf("receiver user: %w", err)
+		}
+		return err
+	}
+
+	if receiver.ID == senderID {
+		return ErrSendToYourself
+	}
+
+	err = s.repo.SendCoin(ctx, senderID, receiver.ID, amount)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -2,15 +2,8 @@ package handlers
 
 import (
 	"encoding/json"
-	"errors"
 	"merch-shop/internal/models"
 	"net/http"
-)
-
-var (
-	ErrEmptyNamePassword    = errors.New("empty name or password specified")
-	ErrEmptyToUser          = errors.New("empty toUser field")
-	ErrZeroOrNegativeAmount = errors.New("amount to send should be positive")
 )
 
 func (h *Handler) readJSON(r *http.Request, dst any) error {
@@ -23,6 +16,7 @@ func (h *Handler) writeJSON(w http.ResponseWriter, status int, data any, headers
 	if err != nil {
 		return err
 	}
+	js = append(js, '\n')
 
 	for key, value := range headers {
 		w.Header()[key] = value
@@ -44,7 +38,7 @@ func authRequestValid(authRequest *models.AuthRequest) error {
 }
 
 func sendCoinRequestValid(sendCoinRequest *models.SendCoinRequest) error {
-	if sendCoinRequest.ToUser == "" {
+	if sendCoinRequest.ReceiverName == "" {
 		return ErrEmptyToUser
 	}
 
