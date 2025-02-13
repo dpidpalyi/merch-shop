@@ -99,3 +99,20 @@ func (s *Service) SendCoin(ctx context.Context, senderID int, receiverName strin
 
 	return nil
 }
+
+func (s *Service) BuyItem(ctx context.Context, userID int, item string) {
+	userBalance, err := s.repo.GetBalance(ctx, senderID)
+	if err != nil {
+		switch {
+		case errors.Is(err, repository.ErrRecordNotFound):
+			return fmt.Errorf("user: %w", err)
+		}
+		return err
+	}
+
+
+	if err := checkBalance(senderBalance, amount); err != nil {
+		return err
+	}
+
+}

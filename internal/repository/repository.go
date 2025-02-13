@@ -101,62 +101,13 @@ func (r *PostgresRepository) GetBalance(ctx context.Context, userID int) (int, e
 	return balance, nil
 }
 
-func (r *PostgresRepository) InsertItem(ctx context.Context, userID, itemID int) error {
+func (r *PostgresRepository) BuyItem(ctx context.Context, userID, itemID int) error {
+	// TODO: DO NOTHING, return OK, else UPDATE
 	query := `
 	    INSERT INTO inventory(user_id, item_id)
-	    VALUES ($1, $2)`
-
-	args := []any{userID, itemID}
-
-	tx, err := r.DB.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		}
-	}()
-
-	_, err = tx.ExecContext(ctx, query, args...)
-	if err != nil {
-		return err
-	}
-
-	query = `
-	    SELECT price
-	    FROM item
-	    WHERE id = $1`
-
-	var price int
-
-	err = tx.QueryRowContext(ctx, query, itemID).Scan(&price)
-	if err != nil {
-		return err
-	}
-
-	query = `
-	    UPDATE coins
-	    SET balance = balance - $2
-	    WHERE user_id = $1`
-
-	args = []any{userID, price}
-
-	_, err = tx.ExecContext(ctx, query, args...)
-	if err != nil {
-		return err
-	}
-
-	err = tx.Commit()
-	return err
-}
-
-func (r *PostgresRepository) UpdateItem(ctx context.Context, userID, itemID int) error {
-	query := `
-	    UPDATE inventory
-	    SET quantity = quantity + 1
-	    WHERE user_id = $1 AND item_ID = $2`
+	    VALUES ($1, $2)
+	    ON CONFLICT (user_id, item_id)
+	    DO UPDATE SET quantity = inventory.quantity + 1`
 
 	args := []any{userID, itemID}
 

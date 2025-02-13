@@ -94,9 +94,21 @@ func (h *Handler) SendCoin(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+}
 
-	err = h.writeJSON(w, http.StatusOK, "GOOD", nil)
+func (h *Handler) BuyItem(w http.ResponseWriter, r *http.Request) {
+	item := r.PathValue("item")
+	if item == "" {
+		h.badRequestResponse(w, r, ErrEmptyItem)
+		return
+	}
+
+	ctx := r.Context()
+	userID := ctx.Value("userID").(int)
+
+	err := h.service.BuyItem(ctx, userID, item)
 	if err != nil {
-		h.serverErrorResponse(w, r, err)
+		h.badRequestResponse(w, r, err)
+		return
 	}
 }
