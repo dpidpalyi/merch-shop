@@ -86,7 +86,7 @@ func (h *Handler) SendCoin(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, repository.ErrRecordNotFound),
-			errors.Is(err, service.ErrNotEnoughCoins),
+			errors.Is(err, repository.ErrNotEnoughCoins),
 			errors.Is(err, service.ErrSendToYourself):
 			h.badRequestResponse(w, r, err)
 		default:
@@ -97,8 +97,8 @@ func (h *Handler) SendCoin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) BuyItem(w http.ResponseWriter, r *http.Request) {
-	item := r.PathValue("item")
-	if item == "" {
+	itemName := r.PathValue("item")
+	if itemName == "" {
 		h.badRequestResponse(w, r, ErrEmptyItem)
 		return
 	}
@@ -106,7 +106,7 @@ func (h *Handler) BuyItem(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	userID := ctx.Value("userID").(int)
 
-	err := h.service.BuyItem(ctx, userID, item)
+	err := h.service.BuyItem(ctx, userID, itemName)
 	if err != nil {
 		h.badRequestResponse(w, r, err)
 		return

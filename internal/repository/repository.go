@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"merch-shop/internal/models"
 )
 
@@ -11,6 +12,7 @@ type Repository interface {
 	GetByUsername(ctx context.Context, username string) (*models.User, error)
 	Add(ctx context.Context, u *models.User) error
 	GetBalance(ctx context.Context, userID int) (int, error)
+	BuyItem(ctx context.Context, userID int, itemName string) error
 	SendCoin(ctx context.Context, senderID, receiverID int, amount int) error
 }
 
@@ -51,23 +53,22 @@ func (r *PostgresRepository) GetByUsername(ctx context.Context, username string)
 }
 
 func (r *PostgresRepository) Add(ctx context.Context, u *models.User) error {
+	tx, err := r.DB.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
 	query := `
 	    INSERT INTO users(username, password_hash)
 	    VALUES ($1, $2)
 	    RETURNING id, created_at`
 
 	args := []any{u.Username, u.PasswordHash}
-
-	tx, err := r.DB.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		}
-	}()
 
 	err = tx.QueryRowContext(ctx, query, args...).Scan(&u.ID, &u.CreatedAt)
 	if err != nil {
@@ -80,8 +81,12 @@ func (r *PostgresRepository) Add(ctx context.Context, u *models.User) error {
 	    VALUES ($1)`
 
 	_, err = tx.ExecContext(ctx, query, u.ID)
+	if err != nil {
+		return err
+	}
 
 	err = tx.Commit()
+
 	return err
 }
 
@@ -101,40 +106,86 @@ func (r *PostgresRepository) GetBalance(ctx context.Context, userID int) (int, e
 	return balance, nil
 }
 
-func (r *PostgresRepository) BuyItem(ctx context.Context, userID, itemID int) error {
-	// TODO: DO NOTHING, return OK, else UPDATE
+func (r *PostgresRepository) GetItemByName(ctx context.Context, itemName string) (*models.Item, error) {
 	query := `
-	    INSERT INTO inventory(user_id, item_id)
-	    VALUES ($1, $2)
-	    ON CONFLICT (user_id, item_id)
-	    DO UPDATE SET quantity = inventory.quantity + 1`
+	    SELECT id, price
+	    FROM items
+	    WHERE type = $1`
 
-	args := []any{userID, itemID}
+	item := &models.Item{
+		Name: itemName,
+	}
 
+	err := r.DB.QueryRowContext(ctx, query, itemName).Scan(
+		&item.ID,
+		&item.Price,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrRecordNotFound
+		}
+		return nil, err
+	}
+
+	return item, nil
+}
+
+func (r *PostgresRepository) BuyItem(ctx context.Context, userID int, itemName string) error {
 	tx, err := r.DB.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
 		return err
 	}
-
 	defer func() {
 		if err != nil {
 			tx.Rollback()
 		}
 	}()
 
-	_, err = tx.ExecContext(ctx, query, args...)
+	query := `
+	     SELECT balance
+	     FROM coins
+	     WHERE user_id = $1`
+
+	var balance int
+	err = tx.QueryRowContext(ctx, query, userID).Scan(&balance)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("user: %w", ErrRecordNotFound)
+		}
 		return err
 	}
 
 	query = `
-	    SELECT price
+	    SELECT id, price
 	    FROM item
-	    WHERE id = $1`
+	    WHERE type = $1`
 
-	var price int
+	var item models.Item
 
-	err = tx.QueryRowContext(ctx, query, itemID).Scan(&price)
+	err = tx.QueryRowContext(ctx, query, itemName).Scan(
+		&item.ID,
+		&item.Price,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("item: %w", ErrRecordNotFound)
+		}
+		return err
+	}
+
+	if err := checkBalance(balance, item.Price); err != nil {
+		return err
+	}
+
+	query = `
+	    INSERT INTO inventory(user_id, item_id)
+	    VALUES ($1, $2)
+	    ON CONFLICT (user_id, item_id)
+	    DO UPDATE SET quantity = inventory.quantity + 1`
+
+	args := []any{userID, item.ID}
+
+	_, err = tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -144,7 +195,7 @@ func (r *PostgresRepository) BuyItem(ctx context.Context, userID, itemID int) er
 	    SET balance = balance - $2
 	    WHERE user_id = $1`
 
-	args = []any{userID, price}
+	args = []any{userID, item.Price}
 
 	_, err = tx.ExecContext(ctx, query, args...)
 	if err != nil {
@@ -152,26 +203,44 @@ func (r *PostgresRepository) BuyItem(ctx context.Context, userID, itemID int) er
 	}
 
 	err = tx.Commit()
+
 	return err
 }
 
 func (r *PostgresRepository) SendCoin(ctx context.Context, senderID, receiverID int, amount int) error {
-	query := `
-	     INSERT INTO transaction(sender_id, receiver_id, amount)
-	     VALUES ($1, $2, $3)`
-
-	args := []any{senderID, receiverID, amount}
-
 	tx, err := r.DB.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
 		return err
 	}
-
 	defer func() {
 		if err != nil {
 			tx.Rollback()
 		}
 	}()
+
+	query := `
+	     SELECT balance
+	     FROM coins
+	     WHERE user_id = $1`
+
+	var balance int
+	err = tx.QueryRowContext(ctx, query, senderID).Scan(&balance)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("sender user: %w", ErrRecordNotFound)
+		}
+		return err
+	}
+
+	if err := checkBalance(balance, amount); err != nil {
+		return err
+	}
+
+	query = `
+	     INSERT INTO transaction(sender_id, receiver_id, amount)
+	     VALUES ($1, $2, $3)`
+
+	args := []any{senderID, receiverID, amount}
 
 	_, err = tx.ExecContext(ctx, query, args...)
 	if err != nil {
@@ -193,6 +262,7 @@ func (r *PostgresRepository) SendCoin(ctx context.Context, senderID, receiverID 
 	}
 
 	err = tx.Commit()
+
 	return err
 }
 

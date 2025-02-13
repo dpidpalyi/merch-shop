@@ -66,23 +66,9 @@ func (s *Service) GetByUsername(ctx context.Context, username string) (*models.U
 }
 
 func (s *Service) SendCoin(ctx context.Context, senderID int, receiverName string, amount int) error {
-	senderBalance, err := s.repo.GetBalance(ctx, senderID)
-	if err != nil {
-		switch {
-		case errors.Is(err, repository.ErrRecordNotFound):
-			return fmt.Errorf("sender user: %w", err)
-		}
-		return err
-	}
-
-	if err := checkBalance(senderBalance, amount); err != nil {
-		return err
-	}
-
 	receiver, err := s.repo.GetByUsername(ctx, receiverName)
 	if err != nil {
-		switch {
-		case errors.Is(err, repository.ErrRecordNotFound):
+		if errors.Is(err, repository.ErrRecordNotFound) {
 			return fmt.Errorf("receiver user: %w", err)
 		}
 		return err
@@ -92,27 +78,9 @@ func (s *Service) SendCoin(ctx context.Context, senderID int, receiverName strin
 		return ErrSendToYourself
 	}
 
-	err = s.repo.SendCoin(ctx, senderID, receiver.ID, amount)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return s.repo.SendCoin(ctx, senderID, receiver.ID, amount)
 }
 
-func (s *Service) BuyItem(ctx context.Context, userID int, item string) {
-	userBalance, err := s.repo.GetBalance(ctx, senderID)
-	if err != nil {
-		switch {
-		case errors.Is(err, repository.ErrRecordNotFound):
-			return fmt.Errorf("user: %w", err)
-		}
-		return err
-	}
-
-
-	if err := checkBalance(senderBalance, amount); err != nil {
-		return err
-	}
-
+func (s *Service) BuyItem(ctx context.Context, userID int, itemName string) error {
+	return s.repo.BuyItem(ctx, userID, itemName)
 }
