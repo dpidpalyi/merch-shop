@@ -92,7 +92,6 @@ func (h *Handler) SendCoin(w http.ResponseWriter, r *http.Request) {
 		default:
 			h.serverErrorResponse(w, r, err)
 		}
-		return
 	}
 }
 
@@ -108,7 +107,33 @@ func (h *Handler) BuyItem(w http.ResponseWriter, r *http.Request) {
 
 	err := h.service.BuyItem(ctx, userID, itemName)
 	if err != nil {
-		h.badRequestResponse(w, r, err)
+		switch {
+		case errors.Is(err, repository.ErrRecordNotFound),
+			errors.Is(err, repository.ErrNotEnoughCoins):
+			h.badRequestResponse(w, r, err)
+		default:
+			h.serverErrorResponse(w, r, err)
+		}
+	}
+}
+
+func (h *Handler) Info(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	userID := ctx.Value("userID").(int)
+
+	infoResponse, err := h.service.Info(ctx, userID)
+	if err != nil {
+		switch {
+		case errors.Is(err, repository.ErrRecordNotFound):
+			h.badRequestResponse(w, r, err)
+		default:
+			h.serverErrorResponse(w, r, err)
+		}
 		return
+	}
+
+	err = h.writeJSON(w, http.StatusOK, infoResponse, nil)
+	if err != nil {
+		h.serverErrorResponse(w, r, err)
 	}
 }

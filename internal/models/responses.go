@@ -9,9 +9,9 @@ type AuthResponse struct {
 }
 
 type InfoResponse struct {
-	Coins       int             `json:"coins"`
-	Inventory   []InventoryItem `json:"inventory"`
-	CoinHistory CoinHistory     `json:"coinHistory"`
+	Coins       int              `json:"coins"`
+	Inventory   []*InventoryItem `json:"inventory"`
+	CoinHistory *CoinHistory     `json:"coinHistory"`
 }
 
 type InventoryItem struct {
@@ -20,8 +20,8 @@ type InventoryItem struct {
 }
 
 type CoinHistory struct {
-	Received []CoinTransaction `json:"received"`
-	Sent     []CoinTransaction `json:"sent"`
+	Received []*CoinTransaction `json:"received"`
+	Sent     []*CoinTransaction `json:"sent"`
 }
 
 type CoinTransaction struct {

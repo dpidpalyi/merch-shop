@@ -61,10 +61,6 @@ func (s *Service) Add(ctx context.Context, username, password string) (string, e
 	return utils.GenerateToken(user.ID, s.cfg.JWT.SecretKey, s.cfg.JWT.TokenExpiry)
 }
 
-func (s *Service) GetByUsername(ctx context.Context, username string) (*models.User, error) {
-	return s.repo.GetByUsername(ctx, username)
-}
-
 func (s *Service) SendCoin(ctx context.Context, senderID int, receiverName string, amount int) error {
 	receiver, err := s.repo.GetByUsername(ctx, receiverName)
 	if err != nil {
@@ -83,4 +79,29 @@ func (s *Service) SendCoin(ctx context.Context, senderID int, receiverName strin
 
 func (s *Service) BuyItem(ctx context.Context, userID int, itemName string) error {
 	return s.repo.BuyItem(ctx, userID, itemName)
+}
+
+func (s *Service) Info(ctx context.Context, userID int) (*models.InfoResponse, error) {
+	coins, err := s.repo.GetBalance(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	inventory, err := s.repo.GetInventory(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	coinHistory, err := s.repo.GetCoinHistory(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	infoResponse := &models.InfoResponse{
+		Coins:       coins,
+		Inventory:   inventory,
+		CoinHistory: coinHistory,
+	}
+
+	return infoResponse, nil
 }

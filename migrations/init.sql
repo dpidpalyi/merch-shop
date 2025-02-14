@@ -2,11 +2,19 @@ CREATE TABLE IF NOT EXISTS users (
 	id SERIAL PRIMARY KEY,
 	username VARCHAR(50) UNIQUE NOT NULL,
 	password_hash TEXT NOT NULL,
-	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	is_active BOOLEAN DEFAULT TRUE
 );
 
+CREATE INDEX idx_users_is_active ON users(is_active);
+
+CREATE VIEW active_users AS
+SELECT id, username, password_hash, created_at
+FROM users
+WHERE is_active = TRUE;
+
 CREATE TABLE IF NOT EXISTS coins (
-	user_id INT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+	user_id INT PRIMARY KEY REFERENCES users(id),
 	balance INT NOT NULL DEFAULT 1000
 );
 
@@ -20,7 +28,7 @@ CREATE TABLE IF NOT EXISTS item (
 
 CREATE TABLE IF NOT EXISTS inventory (
 	id SERIAL PRIMARY KEY,
-	user_id INT REFERENCES users(id) ON DELETE CASCADE,
+	user_id INT REFERENCES users(id),
 	item_id INT REFERENCES item(id) ON DELETE CASCADE,
 	quantity INT NOT NULL DEFAULT 1,
 	UNIQUE (user_id, item_id)
@@ -28,8 +36,8 @@ CREATE TABLE IF NOT EXISTS inventory (
 
 CREATE TABLE IF NOT EXISTS transaction (
 	id SERIAL PRIMARY KEY,
-	sender_id INT REFERENCES users(id) ON DELETE SET NULL,
-	receiver_id INT REFERENCES users(id) ON DELETE SET NULL,
+	sender_id INT REFERENCES users(id),
+	receiver_id INT REFERENCES users(id),
 	amount INT NOT NULL,
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

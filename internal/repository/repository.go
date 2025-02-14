@@ -11,9 +11,11 @@ import (
 type Repository interface {
 	GetByUsername(ctx context.Context, username string) (*models.User, error)
 	Add(ctx context.Context, u *models.User) error
-	GetBalance(ctx context.Context, userID int) (int, error)
 	BuyItem(ctx context.Context, userID int, itemName string) error
 	SendCoin(ctx context.Context, senderID, receiverID int, amount int) error
+	GetBalance(ctx context.Context, userID int) (int, error)
+	GetInventory(ctx context.Context, userID int) ([]*models.InventoryItem, error)
+	GetCoinHistory(ctx context.Context, userID int) (*models.CoinHistory, error)
 }
 
 type PostgresRepository struct {
@@ -29,7 +31,7 @@ func NewPostgresRepository(db *sql.DB) *PostgresRepository {
 func (r *PostgresRepository) GetByUsername(ctx context.Context, username string) (*models.User, error) {
 	query := `
 	    SELECT id, password_hash, created_at
-	    FROM users
+	    FROM active_users
 	    WHERE username = $1`
 
 	user := &models.User{
@@ -90,22 +92,6 @@ func (r *PostgresRepository) Add(ctx context.Context, u *models.User) error {
 	return err
 }
 
-func (r *PostgresRepository) GetBalance(ctx context.Context, userID int) (int, error) {
-	query := `
-	    SELECT balance
-	    FROM coins
-	    WHERE user_id = $1`
-
-	var balance int
-
-	err := r.DB.QueryRowContext(ctx, query, userID).Scan(&balance)
-	if err != nil {
-		return 0, err
-	}
-
-	return balance, nil
-}
-
 func (r *PostgresRepository) GetItemByName(ctx context.Context, itemName string) (*models.Item, error) {
 	query := `
 	    SELECT id, price
@@ -144,6 +130,7 @@ func (r *PostgresRepository) BuyItem(ctx context.Context, userID int, itemName s
 	query := `
 	     SELECT balance
 	     FROM coins
+	     JOIN active_users ON coins.user_id = active_users.id
 	     WHERE user_id = $1`
 
 	var balance int
@@ -221,6 +208,7 @@ func (r *PostgresRepository) SendCoin(ctx context.Context, senderID, receiverID 
 	query := `
 	     SELECT balance
 	     FROM coins
+	     JOIN active_users ON coins.user_id = active_users.id
 	     WHERE user_id = $1`
 
 	var balance int
@@ -266,11 +254,31 @@ func (r *PostgresRepository) SendCoin(ctx context.Context, senderID, receiverID 
 	return err
 }
 
+func (r *PostgresRepository) GetBalance(ctx context.Context, userID int) (int, error) {
+	query := `
+	    SELECT balance
+	    FROM coins
+	    JOIN active_users ON coins.user_id = active_users.id
+	    WHERE user_id = $1`
+
+	var balance int
+
+	err := r.DB.QueryRowContext(ctx, query, userID).Scan(&balance)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, fmt.Errorf("user: %w", ErrRecordNotFound)
+		}
+		return 0, err
+	}
+
+	return balance, nil
+}
+
 func (r *PostgresRepository) GetInventory(ctx context.Context, userID int) ([]*models.InventoryItem, error) {
 	query := `
-	    SELECT it.type, in.quantity
-	    FROM inventory AS in
-	    JOIN item AS it ON in.item_id = it.id
+	    SELECT it.type, i.quantity
+	    FROM inventory AS i
+	    JOIN item AS it ON i.item_id = it.id
 	    WHERE user_id = $1`
 
 	rows, err := r.DB.QueryContext(ctx, query, userID)
@@ -279,10 +287,10 @@ func (r *PostgresRepository) GetInventory(ctx context.Context, userID int) ([]*m
 	}
 	defer rows.Close()
 
-	var inventory []*models.InventoryItem
+	inventory := []*models.InventoryItem{}
 
 	for rows.Next() {
-		var item *models.InventoryItem
+		var item models.InventoryItem
 		err := rows.Scan(
 			&item.Type,
 			&item.Quantity,
@@ -291,7 +299,7 @@ func (r *PostgresRepository) GetInventory(ctx context.Context, userID int) ([]*m
 			return nil, err
 		}
 
-		inventory = append(inventory, item)
+		inventory = append(inventory, &item)
 	}
 
 	if err = rows.Err(); err != nil {
@@ -301,4 +309,85 @@ func (r *PostgresRepository) GetInventory(ctx context.Context, userID int) ([]*m
 	return inventory, nil
 }
 
-func (r *PostgresRepository) GetCoinHistory(ctx context.Context) {}
+func (r *PostgresRepository) GetCoinHistory(ctx context.Context, userID int) (*models.CoinHistory, error) {
+	tx, err := r.DB.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	query := `
+	    SELECT u1.username, t.amount
+	    FROM transaction AS t
+	    JOIN users AS u1 ON t.sender_id = u1.id
+	    JOIN users AS u2 ON t.receiver_id = u2.id
+	    WHERE t.receiver_id = $1`
+
+	rows, err := tx.QueryContext(ctx, query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	received := []*models.CoinTransaction{}
+
+	for rows.Next() {
+		var r models.CoinTransaction
+		err := rows.Scan(
+			&r.FromUser,
+			&r.Amount,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		received = append(received, &r)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	query = `
+	    SELECT u2.username, t.amount
+	    FROM transaction AS t
+	    JOIN users AS u1 ON t.sender_id = u1.id
+	    JOIN users AS u2 ON t.receiver_id = u2.id
+	    WHERE t.sender_id = $1`
+
+	rows, err = tx.QueryContext(ctx, query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	sent := []*models.CoinTransaction{}
+
+	for rows.Next() {
+		var s models.CoinTransaction
+		err := rows.Scan(
+			&s.ToUser,
+			&s.Amount,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		sent = append(sent, &s)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	coinHistory := &models.CoinHistory{
+		Received: received,
+		Sent:     sent,
+	}
+
+	return coinHistory, nil
+}

@@ -12,7 +12,7 @@ func (h *Handler) readJSON(r *http.Request, dst any) error {
 }
 
 func (h *Handler) writeJSON(w http.ResponseWriter, status int, data any, headers http.Header) error {
-	js, err := json.Marshal(data)
+	js, err := json.MarshalIndent(data, "", "\t")
 	if err != nil {
 		return err
 	}
