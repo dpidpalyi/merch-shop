@@ -7,35 +7,39 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
-type Config struct {
+type (
+	Config struct {
+		Server `yaml:"server"`
+		DB     `yaml:"db"`
+		JWT    `yaml:"jwt"`
+	}
+
 	Server struct {
-		Port         string        `env:"SERVER_PORT"`
-		ReadTimeout  time.Duration `env:"SERVER_READ_TIMEOUT"`
-		WriteTimeout time.Duration `env:"SERVER_WRITE_TIMEOUT"`
+		Port         string        `yaml:"port" env:"SERVER_PORT"`
+		ReadTimeout  time.Duration `yaml:"read_timeout" env:"SERVER_READ_TIMEOUT"`
+		WriteTimeout time.Duration `yaml:"write_timeout" env:"SERVER_WRITE_TIMEOUT"`
 	}
 
 	DB struct {
-		Host     string `env:"DB_HOST"`
-		Port     string `env:"DB_PORT"`
-		User     string `env:"DB_USER"`
-		Password string `env:"DB_PASSWORD"`
-		Name     string `env:"DB_NAME"`
-		SSLMode  string `env:"DB_SSL_MODE"`
+		Host     string `yaml:"host" env:"DB_HOST"`
+		Port     string `yaml:"port" env:"DB_PORT"`
+		User     string `yaml:"user" env:"DB_USER"`
+		Password string `yaml:"password" env:"DB_PASSWORD"`
+		Name     string `yaml:"name" env:"DB_NAME"`
+		SSLMode  string `yaml:"ssl_mode" env:"DB_SSL_MODE"`
 	}
 
 	JWT struct {
-		SecretKey     string        `env:"JWT_SECRET_KEY"`
-		TokenExpiry   time.Duration `env:"JWT_TOKEN_EXPIRY"`
-		RefreshExpiry time.Duration `env:"JWT_REFRESH_EXPIRY"`
+		SecretKey     string        `yaml:"secret_key" env:"JWT_SECRET_KEY"`
+		TokenExpiry   time.Duration `yaml:"token_expiry" env:"JWT_TOKEN_EXPIRY"`
+		RefreshExpiry time.Duration `yaml:"refresh_expiry" env:"JWT_REFRESH_EXPIRY"`
 	}
-}
+)
 
 func New(path string) (*Config, error) {
 	cfg := &Config{}
 
-	cleanenv.ReadConfig(".env", cfg)
-
-	err := cleanenv.ReadEnv(cfg)
+	err := cleanenv.ReadConfig("config.yml", cfg)
 	if err != nil {
 		return nil, err
 	}

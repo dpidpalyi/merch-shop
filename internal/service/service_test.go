@@ -161,44 +161,44 @@ func Test_SendCoin(t *testing.T) {
 	service := NewService(mockRepo, cfg)
 
 	tests := []struct {
-		name       string
-		senderID   int
-		receiverName   string
-		amount int
-		wantErr    bool
-		mockRepoFn func()
+		name         string
+		senderID     int
+		receiverName string
+		amount       int
+		wantErr      bool
+		mockRepoFn   func()
 	}{
 		{
-			name:     "receiver not exists",
+			name:         "receiver not exists",
 			receiverName: "bob",
-			wantErr: true,
+			wantErr:      true,
 			mockRepoFn: func() {
 				mockRepo.On("GetByUsername", ctx, "bob").Return(nil, repository.ErrRecordNotFound)
 			},
 		},
 		{
-			name:     "db fails",
+			name:         "db fails",
 			receiverName: "carl",
-			wantErr: true,
+			wantErr:      true,
 			mockRepoFn: func() {
 				mockRepo.On("GetByUsername", ctx, "carl").Return(nil, errors.New("db fails"))
 			},
 		},
 		{
-			name:     "receiver exists, fail to send yourself",
-			senderID: 1,
+			name:         "receiver exists, fail to send yourself",
+			senderID:     1,
 			receiverName: "alice",
-			wantErr: true,
+			wantErr:      true,
 			mockRepoFn: func() {
 				hashedPassword, _ := utils.HashPassword("password")
 				mockRepo.On("GetByUsername", ctx, "alice").Return(&models.User{ID: 1, Username: "alice", PasswordHash: hashedPassword}, nil)
 			},
 		},
 		{
-			name:     "receiver exists, success to send",
-			senderID: 1,
+			name:         "receiver exists, success to send",
+			senderID:     1,
 			receiverName: "sarah",
-			amount: 100,
+			amount:       100,
 			mockRepoFn: func() {
 				hashedPassword, _ := utils.HashPassword("password")
 				mockRepo.On("GetByUsername", ctx, "sarah").Return(&models.User{ID: 2, Username: "sarah", PasswordHash: hashedPassword}, nil)
@@ -206,11 +206,11 @@ func Test_SendCoin(t *testing.T) {
 			},
 		},
 		{
-			name:     "receiver exists, failed to send",
-			senderID: 1,
+			name:         "receiver exists, failed to send",
+			senderID:     1,
 			receiverName: "sarah",
-			amount: 10000,
-			wantErr: true,
+			amount:       10000,
+			wantErr:      true,
 			mockRepoFn: func() {
 				hashedPassword, _ := utils.HashPassword("password")
 				mockRepo.On("GetByUsername", ctx, "sarah").Return(&models.User{ID: 2, Username: "sarah", PasswordHash: hashedPassword}, nil)
@@ -244,14 +244,14 @@ func Test_BuyItem(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		userID   int
+		userID     int
 		itemName   string
 		wantErr    bool
 		mockRepoFn func()
 	}{
 		{
 			name:     "success to buy item",
-			userID: 1,
+			userID:   1,
 			itemName: "cup",
 			mockRepoFn: func() {
 				mockRepo.On("BuyItem", ctx, 1, "cup").Return(nil)
@@ -259,9 +259,9 @@ func Test_BuyItem(t *testing.T) {
 		},
 		{
 			name:     "fails to buy item",
-			userID: 2,
+			userID:   2,
 			itemName: "cup",
-			wantErr: true,
+			wantErr:  true,
 			mockRepoFn: func() {
 				mockRepo.On("BuyItem", ctx, 2, "cup").Return(repository.ErrNotEnoughCoins)
 			},
@@ -293,31 +293,31 @@ func Test_Info(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		userID   int
+		userID     int
 		wantErr    bool
 		mockRepoFn func()
 	}{
 		{
-			name:       "user not exists",
-			userID:   1,
-			wantErr:    true,
+			name:    "user not exists",
+			userID:  1,
+			wantErr: true,
 			mockRepoFn: func() {
 				mockRepo.On("GetBalance", ctx, 1).Return(0, repository.ErrRecordNotFound)
 			},
 		},
 		{
-			name:       "user exists, inventory fails",
-			userID:   2,
-			wantErr:    true,
+			name:    "user exists, inventory fails",
+			userID:  2,
+			wantErr: true,
 			mockRepoFn: func() {
 				mockRepo.On("GetBalance", ctx, 2).Return(0, nil)
 				mockRepo.On("GetInventory", ctx, 2).Return(nil, errors.New("db fails"))
 			},
 		},
 		{
-			name:       "user exists, coinHistory fails",
-			userID:   3,
-			wantErr:    true,
+			name:    "user exists, coinHistory fails",
+			userID:  3,
+			wantErr: true,
 			mockRepoFn: func() {
 				mockRepo.On("GetBalance", ctx, 3).Return(0, nil)
 				mockRepo.On("GetInventory", ctx, 3).Return(nil, nil)
@@ -325,8 +325,8 @@ func Test_Info(t *testing.T) {
 			},
 		},
 		{
-			name:       "user exists, success",
-			userID:   4,
+			name:   "user exists, success",
+			userID: 4,
 			mockRepoFn: func() {
 				mockRepo.On("GetBalance", ctx, 4).Return(0, nil)
 				mockRepo.On("GetInventory", ctx, 4).Return(nil, nil)

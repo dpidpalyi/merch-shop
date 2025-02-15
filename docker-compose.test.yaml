@@ -1,44 +1,44 @@
 version: '3.8'
 
 services:
-  avito-shop-service:
+  avito-shop-service-service:
       build: .
-      container_name: avito-shop-service
+      container_name: avito-shop-service-test
       ports:
-        - "8080:8080"
+        - "8081:8080"
       environment:
         # енвы подключения к БД
         - DB_PORT=5432
         - DB_USER=postgres
         - DB_PASSWORD=password
-        - DB_NAME=shop
-        - DB_HOST=db
+        - DB_NAME=shop_test
+        - DB_HOST=db-test
         # порт сервиса
         - SERVER_PORT=8080
       depends_on:
-        db:
+        db-test:
             condition: service_healthy
       networks:
-        - internal
+        - internal-test
   
-  db:
+  db-test:
     image: postgres:latest
-    container_name: postgres
+    container_name: postgres-test
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: shop
+      POSTGRES_DB: shop_test
     volumes:
       - ./migrations/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
-      - "5432:5432"
+      - "5433:5432"
     healthcheck:
-      test: ["CMD-SHELL", "sh -c 'pg_isready -U postgres -d shop'"]
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U postgres -d shop_test'"]
       interval: 5s
       timeout: 10s
       retries: 5
       start_period: 10s
     networks:
-      - internal
+      - internal-test
 networks:
-  internal:
+  internal-test:
