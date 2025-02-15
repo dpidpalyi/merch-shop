@@ -1,4 +1,4 @@
-HEADER='Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3Mzk1OTk3OTIsInVzZXJfaWQiOjF9.p9L-Z63fLjFCd_93s3dd0WJaquRY5SW-Y9RN1JT8EoM'
+HEADER='Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3Mzk2Nzc5ODksInVzZXJfaWQiOjF9.CI3aWDccp4DKqkuG-FjQR-C9VIGo187cshHYwc8vSsk'
 curl -i -XGET --header "$HEADER" localhost:8080/api/buy/cup
 curl -i -XGET --header "$HEADER" localhost:8080/api/buy/cup
 curl -i -XGET --header "$HEADER" localhost:8080/api/buy/pink-hoody

@@ -3,50 +3,93 @@ package service
 import (
 	"context"
 	"errors"
-	"fmt"
 	"merch-shop/internal/config"
+	"merch-shop/internal/models"
 	"merch-shop/internal/repository"
+	"merch-shop/internal/repository/mocks"
+	"merch-shop/internal/utils"
 	"testing"
 
-	"golang.org/x/crypto/bcrypt"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
-func Test_Add(t *testing.T) {
+func Test_Login(t *testing.T) {
+	ctx := context.Background()
+	cfg := &config.Config{}
+	mockRepo := new(mocks.Repository)
+	service := NewService(mockRepo, cfg)
+
 	tests := []struct {
-		name     string
-		user     string
-		password string
-		wantErr  error
+		name       string
+		username   string
+		password   string
+		wantErr    bool
+		mockRepoFn func()
 	}{
 		{
-			name:     "success",
-			user:     "valid",
-			password: "password",
-			wantErr:  nil,
+			name:       "password too long",
+			username:   "ma long",
+			password:   string(make([]byte, 76)),
+			wantErr:    true,
+			mockRepoFn: func() {},
 		},
 		{
-			name:     "failure due DB error",
-			user:     "wrong",
+			name:     "user exists, password check success",
+			username: "bob",
 			password: "password",
-			wantErr:  repository.ErrDBError,
+			mockRepoFn: func() {
+				hashedPassword, _ := utils.HashPassword("password")
+				mockRepo.On("GetByUsername", ctx, "bob").Return(&models.User{Username: "bob", PasswordHash: hashedPassword}, nil)
+			},
 		},
 		{
-			name:     "failure due very long password > 72 bytes",
-			user:     "valid",
-			password: string(make([]byte, 74)),
-			wantErr:  bcrypt.ErrPasswordTooLong,
+			name:     "user not exists, db success",
+			username: "alice",
+			password: "password",
+			mockRepoFn: func() {
+				mockRepo.On("GetByUsername", ctx, "alice").Return(nil, repository.ErrRecordNotFound)
+				mockRepo.On("Add", ctx, mock.MatchedBy(func(u *models.User) bool {
+					return u.Username == "alice" && len(u.PasswordHash) > 0
+				})).Return(nil)
+			},
+		},
+		{
+			name:     "user not exists, db fails",
+			username: "carl",
+			password: "password",
+			wantErr: true,
+			mockRepoFn: func() {
+				mockRepo.On("GetByUsername", ctx, "carl").Return(nil, errors.New("db fails"))
+			},
+		},
+		{
+			name:     "user exists, password check fails",
+			username: "sarah",
+			password: "wrong password",
+			wantErr: true,
+			mockRepoFn: func() {
+				hashedPassword, _ := utils.HashPassword("password")
+				mockRepo.On("GetByUsername", ctx, "sarah").Return(&models.User{Username: "sarah", PasswordHash: hashedPassword}, nil)
+			},
 		},
 	}
 
-	repo := &repository.MockRepository{}
-	s := NewService(repo, &config.Config{})
-
 	for _, tt := range tests {
-		t.Run(fmt.Sprintf("test %v", tt.name), func(t *testing.T) {
-			_, gotErr := s.Add(context.Background(), tt.user, tt.password)
-			if !errors.Is(gotErr, tt.wantErr) {
-				t.Errorf("got err: %v, want: %v", gotErr, tt.wantErr)
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockRepoFn()
+
+			token, err := service.Login(ctx, tt.username, tt.password)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Empty(t, token)
+			} else {
+				assert.NoError(t, err)
+				assert.NotEmpty(t, token)
 			}
+
+			mockRepo.AssertExpectations(t)
 		})
 	}
 }

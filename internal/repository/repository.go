@@ -55,15 +55,11 @@ func (r *PostgresRepository) GetByUsername(ctx context.Context, username string)
 }
 
 func (r *PostgresRepository) Add(ctx context.Context, u *models.User) error {
-	tx, err := r.DB.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	tx, err := r.DB.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		}
-	}()
+	defer tx.Rollback()
 
 	query := `
 	    INSERT INTO users(username, password_hash)
@@ -87,9 +83,7 @@ func (r *PostgresRepository) Add(ctx context.Context, u *models.User) error {
 		return err
 	}
 
-	err = tx.Commit()
-
-	return err
+	return tx.Commit()
 }
 
 func (r *PostgresRepository) GetItemByName(ctx context.Context, itemName string) (*models.Item, error) {
@@ -117,21 +111,17 @@ func (r *PostgresRepository) GetItemByName(ctx context.Context, itemName string)
 }
 
 func (r *PostgresRepository) BuyItem(ctx context.Context, userID int, itemName string) error {
-	tx, err := r.DB.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	tx, err := r.DB.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		}
-	}()
+	defer tx.Rollback()
 
 	query := `
 	     SELECT balance
 	     FROM coins
 	     JOIN active_users ON coins.user_id = active_users.id
-	     WHERE user_id = $1`
+	     WHERE user_id = $1 FOR UPDATE`
 
 	var balance int
 	err = tx.QueryRowContext(ctx, query, userID).Scan(&balance)
@@ -189,27 +179,21 @@ func (r *PostgresRepository) BuyItem(ctx context.Context, userID int, itemName s
 		return err
 	}
 
-	err = tx.Commit()
-
-	return err
+	return tx.Commit()
 }
 
 func (r *PostgresRepository) SendCoin(ctx context.Context, senderID, receiverID int, amount int) error {
-	tx, err := r.DB.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	tx, err := r.DB.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		}
-	}()
+	defer tx.Rollback()
 
 	query := `
 	     SELECT balance
 	     FROM coins
 	     JOIN active_users ON coins.user_id = active_users.id
-	     WHERE user_id = $1`
+	     WHERE user_id = $1 FOR UPDATE`
 
 	var balance int
 	err = tx.QueryRowContext(ctx, query, senderID).Scan(&balance)
@@ -249,9 +233,7 @@ func (r *PostgresRepository) SendCoin(ctx context.Context, senderID, receiverID 
 		return err
 	}
 
-	err = tx.Commit()
-
-	return err
+	return tx.Commit()
 }
 
 func (r *PostgresRepository) GetBalance(ctx context.Context, userID int) (int, error) {
@@ -310,15 +292,11 @@ func (r *PostgresRepository) GetInventory(ctx context.Context, userID int) ([]*m
 }
 
 func (r *PostgresRepository) GetCoinHistory(ctx context.Context, userID int) (*models.CoinHistory, error) {
-	tx, err := r.DB.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	tx, err := r.DB.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-		}
-	}()
+	defer tx.Rollback()
 
 	query := `
 	    SELECT u1.username, t.amount
@@ -387,6 +365,11 @@ func (r *PostgresRepository) GetCoinHistory(ctx context.Context, userID int) (*m
 	coinHistory := &models.CoinHistory{
 		Received: received,
 		Sent:     sent,
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return nil, err
 	}
 
 	return coinHistory, nil

@@ -6,9 +6,9 @@ SEND5='{"toUser":"Bob","amount":10}'
 SEND6='{"toUser":"Bob","amount":-10}'
 SEND7='{"toUser":"Bob","amount":300}'
 SEND8='{"toUser":"Alice","amount":20}'
-HEADER1='Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3Mzk1OTk3OTIsInVzZXJfaWQiOjF9.p9L-Z63fLjFCd_93s3dd0WJaquRY5SW-Y9RN1JT8EoM'
-HEADER2='Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3Mzk1OTk3OTIsInVzZXJfaWQiOjJ9.vyhQ_rqGynJmfAvy1GvCh7Y0IgYOgRBG2Mq4xKk_ZiA'
-HEADER3='Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3Mzk2MDE3MjUsInVzZXJfaWQiOjN9.C4YdKhvo0EEJNAvc5eC9-9DnR4l_UlzzSpH6pg79C1A'
+HEADER1='Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3Mzk2Nzc5ODksInVzZXJfaWQiOjF9.CI3aWDccp4DKqkuG-FjQR-C9VIGo187cshHYwc8vSsk'
+HEADER2='Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3Mzk2Nzc5ODksInVzZXJfaWQiOjJ9.nA6a4HBh-MS3Fa31gc4es4SKlz28__3E5I61QYdBqfk'
+HEADER3='Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3Mzk2Nzc5ODksInVzZXJfaWQiOjN9.Oh8LQVjsGxruG2fi3gEaowm4vyMaeEP9yMN8gW9ThD4'
 curl -i -XPOST -d "$SEND1" --header "$HEADER1" localhost:8080/api/sendCoin
 curl -i -XPOST -d "$SEND2" --header "$HEADER1" localhost:8080/api/sendCoin
 curl -i -XPOST -d "$SEND3" --header "$HEADER1" localhost:8080/api/sendCoin

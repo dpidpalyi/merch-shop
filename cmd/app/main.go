@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"merch-shop/internal/config"
 	"merch-shop/internal/dbinit"
@@ -10,6 +11,8 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
+	"time"
 )
 
 func main() {
@@ -35,5 +38,17 @@ func main() {
 	}
 
 	logger.Printf("starting backend on %s", srv.Addr)
-	logger.Fatal(srv.ListenAndServe())
+	go func() {
+		logger.Print(srv.ListenAndServe())
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt)
+	<-quit
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	logger.Print("shutting down backend...")
+	srv.Shutdown(ctx)
 }
