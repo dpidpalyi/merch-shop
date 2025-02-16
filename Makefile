@@ -1,7 +1,5 @@
 DEFAULT_GOAL: build
 
-.PHONY: fmt vet build clean run imports docker_up docker_down test test-report
-
 .PHONY: fmt
 fmt:
 	go fmt ./...

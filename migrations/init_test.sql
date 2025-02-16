@@ -16,7 +16,7 @@ WHERE is_active = TRUE;
 CREATE TABLE IF NOT EXISTS coins (
 	user_id INT PRIMARY KEY REFERENCES users(id),
 	-- Set default balance to 100 for easier tests
-	balance INT NOT NULL DEFAULT 100
+	balance INT NOT NULL DEFAULT 100 CHECK (balance >= 0)
 );
 
 CREATE INDEX idx_user_id ON coins(user_id);
@@ -24,7 +24,7 @@ CREATE INDEX idx_user_id ON coins(user_id);
 CREATE TABLE IF NOT EXISTS item (
 	id SERIAL PRIMARY KEY,
 	type VARCHAR(50) UNIQUE NOT NULL,
-	price INT NOT NULL
+	price INT NOT NULL CHECK (price >= 0)
 );
 
 CREATE TABLE IF NOT EXISTS inventory (

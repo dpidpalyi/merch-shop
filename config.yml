@@ -14,5 +14,3 @@ db:
 jwt:
   secret_key: change_me
   token_expiry: 24h
-  refresh_expiry: 168h
-

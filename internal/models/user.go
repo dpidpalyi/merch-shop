@@ -8,10 +8,3 @@ type User struct {
 	PasswordHash string    `json:"password"`
 	CreatedAt    time.Time `json:"-"`
 }
-
-type AuthToken struct {
-	ID        int       `json:"-"`
-	UserID    int       `json:"-"`
-	Token     string    `json:"token"`
-	CreatedAt time.Time `json:"-"`
-}

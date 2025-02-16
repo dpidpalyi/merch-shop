@@ -135,7 +135,7 @@ func Test_Auth_E2E(t *testing.T) {
 	}
 }
 
-func Test_BuyItem(t *testing.T) {
+func Test_BuyItem_E2E(t *testing.T) {
 	// For tests default coins in DB for users set to 100
 
 	httpHost := "http://localhost:8081"
@@ -228,7 +228,7 @@ func Test_BuyItem(t *testing.T) {
 	}
 }
 
-func Test_SendCoin(t *testing.T) {
+func Test_SendCoin_E2E(t *testing.T) {
 	// For tests default coins in DB for users set to 100
 
 	httpHost := "http://localhost:8081"

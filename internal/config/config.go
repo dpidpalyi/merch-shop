@@ -30,9 +30,8 @@ type (
 	}
 
 	JWT struct {
-		SecretKey     string        `yaml:"secret_key" env:"JWT_SECRET_KEY"`
-		TokenExpiry   time.Duration `yaml:"token_expiry" env:"JWT_TOKEN_EXPIRY"`
-		RefreshExpiry time.Duration `yaml:"refresh_expiry" env:"JWT_REFRESH_EXPIRY"`
+		SecretKey   string        `yaml:"secret_key" env:"JWT_SECRET_KEY"`
+		TokenExpiry time.Duration `yaml:"token_expiry" env:"JWT_TOKEN_EXPIRY"`
 	}
 )
 

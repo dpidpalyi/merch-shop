@@ -33,8 +33,10 @@ func main() {
 	handler := handlers.NewHandler(service, cfg, logger)
 
 	srv := &http.Server{
-		Addr:    net.JoinHostPort("", cfg.Server.Port),
-		Handler: handler.Routes(),
+		Addr:         net.JoinHostPort("", cfg.Server.Port),
+		Handler:      handler.Routes(),
+		ReadTimeout:  cfg.Server.ReadTimeout,
+		WriteTimeout: cfg.Server.WriteTimeout,
 	}
 
 	logger.Printf("starting backend on %s", srv.Addr)
