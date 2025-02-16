@@ -3,7 +3,6 @@ package dbinit
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"merch-shop/internal/config"
 	"time"
 
@@ -11,7 +10,6 @@ import (
 )
 
 func OpenDB(cfg *config.Config) (*sql.DB, error) {
-	fmt.Println(cfg.GetDSN())
 	db, err := sql.Open("postgres", cfg.GetDSN())
 	if err != nil {
 		return nil, err

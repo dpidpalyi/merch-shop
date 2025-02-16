@@ -28,12 +28,15 @@ clean:
 
 .PHONY: docker_up
 docker_up:
-	#docker compose -f docker-compose.yaml up -d
-	docker compose -f docker-compose.yaml up
+	docker compose -f docker-compose.yaml up -d
 
 .PHONY: docker_down
 docker_down:
 	docker compose -f docker-compose.yaml down
+
+.PHONY: docker_down_with_volumes
+docker_down_with_volumes:
+	docker compose -f docker-compose.yaml down -v
 
 .PHONY: test
 test:
@@ -46,8 +49,7 @@ test-report:
 
 .PHONY: docker_test_up
 docker_test_up:
-	#docker compose -f docker-compose.test.yaml up -d -V
-	docker compose -f docker-compose.test.yaml up -V
+	docker compose -f docker-compose.test.yaml up -d -V
 
 .PHONY: docker_test_down
 docker_test_down:
@@ -55,5 +57,6 @@ docker_test_down:
 
 .PHONY: e2e
 e2e: docker_test_down docker_test_up
-	go test -v -tags=e2e ./...
+	sleep 3
+	go test -v -count=1 -tags=e2e ./...
 	make docker_test_down

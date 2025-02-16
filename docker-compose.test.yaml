@@ -29,7 +29,7 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: shop_test
     volumes:
-      - ./migrations/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./migrations/init_test.sql:/docker-entrypoint-initdb.d/init_test.sql
     ports:
       - "5433:5432"
     healthcheck:
