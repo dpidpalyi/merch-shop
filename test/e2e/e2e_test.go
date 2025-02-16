@@ -16,6 +16,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestMain(m *testing.M) {
+	os.Chdir("../..")
+	exitCode := m.Run()
+	os.Exit(exitCode)
+}
+
 func AuthUser(t *testing.T, username, password string) (int, string) {
 	httpHost := "http://localhost:8081"
 	client := &http.Client{}
@@ -135,7 +141,6 @@ func Test_BuyItem(t *testing.T) {
 	httpHost := "http://localhost:8081"
 	client := &http.Client{}
 
-	os.Chdir("../..")
 	cfg, err := config.New(".")
 	assert.NoError(t, err)
 	cfg.DB.Port = "5433"
@@ -219,6 +224,140 @@ func Test_BuyItem(t *testing.T) {
 			assert.NoError(t, err)
 
 			assert.Equal(t, tt.wantBalance, balance)
+		})
+	}
+}
+
+func Test_SendCoin(t *testing.T) {
+	// For tests default coins in DB for users set to 100
+
+	httpHost := "http://localhost:8081"
+	client := &http.Client{}
+
+	cfg, err := config.New(".")
+	assert.NoError(t, err)
+	cfg.DB.Port = "5433"
+	cfg.DB.Name = "shop_test"
+
+	db, err := dbinit.OpenDB(cfg)
+	assert.NoError(t, err)
+
+	tests := []struct {
+		name                string
+		sender              string
+		receiver            string
+		password            string
+		amount              int
+		wantStatusCode      int
+		wantErr             bool
+		errResponse         string
+		wantSenderBalance   int
+		wantReceiverBalance int
+	}{
+		{
+			name:                "valid request, success send",
+			sender:              "ivan",
+			receiver:            "anna",
+			password:            "password",
+			amount:              50,
+			wantStatusCode:      http.StatusOK,
+			wantErr:             false,
+			wantSenderBalance:   50,
+			wantReceiverBalance: 150,
+		},
+		{
+			name:                "invalid request, not enough coins",
+			sender:              "andrey",
+			receiver:            "elena",
+			password:            "password",
+			amount:              200,
+			wantStatusCode:      http.StatusBadRequest,
+			wantErr:             true,
+			errResponse:         "not enough coins",
+			wantSenderBalance:   100,
+			wantReceiverBalance: 100,
+		},
+		{
+			name:                "invalid request, non positive amount",
+			sender:              "aleksandr",
+			receiver:            "alisa",
+			password:            "password",
+			amount:              -50,
+			wantStatusCode:      http.StatusBadRequest,
+			wantErr:             true,
+			errResponse:         "amount to send should be positive",
+			wantSenderBalance:   100,
+			wantReceiverBalance: 100,
+		},
+		{
+			name:                "invalid request, sending yourself",
+			sender:              "sergey",
+			receiver:            "sergey",
+			password:            "password",
+			amount:              50,
+			wantStatusCode:      http.StatusBadRequest,
+			wantErr:             true,
+			errResponse:         "can't send coins to yourself",
+			wantSenderBalance:   100,
+			wantReceiverBalance: 100,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, senderToken := AuthUser(t, tt.sender, tt.password)
+			AuthUser(t, tt.receiver, tt.password)
+
+			reqURL := fmt.Sprintf("%s/api/sendCoin", httpHost)
+			sendCoinReq := models.SendCoinRequest{
+				ReceiverName: tt.receiver,
+				Amount:       tt.amount,
+			}
+
+			sendCoinBody, err := json.Marshal(sendCoinReq)
+			assert.NoError(t, err)
+
+			req, err := http.NewRequest("POST", reqURL, bytes.NewReader(sendCoinBody))
+			assert.NoError(t, err)
+
+			req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", senderToken))
+			req.Header.Add("Content-type", "application/json")
+
+			resp, err := client.Do(req)
+			assert.NoError(t, err)
+			defer resp.Body.Close()
+
+			assert.Equal(t, tt.wantStatusCode, resp.StatusCode)
+
+			if tt.wantErr {
+				errorResponse := &models.ErrorResponse{}
+				err := json.NewDecoder(resp.Body).Decode(errorResponse)
+				assert.NoError(t, err)
+				assert.Equal(t, tt.errResponse, errorResponse.Errors)
+			}
+
+			query := `
+			    SELECT balance
+			    FROM coins
+			    JOIN active_users ON coins.user_id = active_users.id
+			    WHERE active_users.username = $1`
+
+			var balance int
+			err = db.QueryRow(query, tt.sender).Scan(&balance)
+			assert.NoError(t, err)
+
+			assert.Equal(t, tt.wantSenderBalance, balance)
+
+			query = `
+			    SELECT balance
+			    FROM coins
+			    JOIN active_users ON coins.user_id = active_users.id
+			    WHERE active_users.username = $1`
+
+			err = db.QueryRow(query, tt.receiver).Scan(&balance)
+			assert.NoError(t, err)
+
+			assert.Equal(t, tt.wantReceiverBalance, balance)
 		})
 	}
 }
